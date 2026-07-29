@@ -3,9 +3,11 @@ from visualizer import draw_detections
 
 from detector import VehicleDetector
 
+
 VIDEO_PATH = "data/videos/HighwayTraffic.mp4"
 
 detector = VehicleDetector()
+
 
 cap = cv2.VideoCapture(VIDEO_PATH)
 
@@ -16,7 +18,7 @@ while True:
     if not ret:
         break
 
-    results, detections = detector.detect(frame)
+    results, detections = detector.track(frame)
 
     frame = draw_detections(
         frame,
@@ -25,9 +27,7 @@ while True:
     )
 
     cv2.imshow("AI Traffic Collision Detection", frame)
-    annotated = results[0].plot()
-
-    cv2.imshow("AI Traffic Collision Detection", annotated)
+    
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

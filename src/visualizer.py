@@ -1,9 +1,6 @@
 import cv2
 
 def draw_detections(frame, detections, names):
-    """
-    Draw bounding boxes, class labels and confidence scores.
-    """
 
     for box in detections:
 
@@ -13,9 +10,21 @@ def draw_detections(frame, detections, names):
 
         class_id = int(box.cls[0])
 
-        label = f"{names[class_id]} {confidence:.2f}"
+        # Handle tracking ID safely
+        track_id = "N/A"
 
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        if box.id is not None:
+            track_id = int(box.id.item())
+
+        label = f"{names[class_id]} #{track_id} {confidence:.2f}"
+
+        cv2.rectangle(
+            frame,
+            (x1, y1),
+            (x2, y2),
+            (0, 255, 0),
+            2
+        )
 
         cv2.putText(
             frame,

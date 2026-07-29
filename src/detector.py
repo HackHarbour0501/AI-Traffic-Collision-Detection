@@ -12,6 +12,21 @@ class VehicleDetector:
 
         results = self.model(frame, verbose=False)
 
+        return self.filter(results)
+
+    def track(self, frame):
+
+        results = self.model.track(
+            frame,
+            persist=True,
+            tracker="bytetrack.yaml",
+            verbose=False
+        )
+
+        return self.filter(results)
+
+    def filter(self, results):
+
         detections = []
 
         for box in results[0].boxes:
