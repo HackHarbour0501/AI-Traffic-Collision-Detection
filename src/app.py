@@ -10,7 +10,7 @@ from config import (
 from detector import VehicleDetector
 from speed_estimator import SpeedEstimator
 from visualizer import Visualizer
-
+from trajectory import TrajectoryManager
 
 detector = VehicleDetector()
 
@@ -18,6 +18,7 @@ speed_estimator = SpeedEstimator()
 
 visualizer = Visualizer()
 
+trajectory= TrajectoryManager()
 
 
 cap = cv2.VideoCapture(str(VIDEO_PATH))
@@ -39,7 +40,11 @@ while True:
 
     results, detections = detector.track(frame)
 
-    speeds = speed_estimator.update(detections)
+    trajectory.update(detections)
+
+    speeds = speed_estimator.update(
+        trajectory
+    )
 
     frame = visualizer.draw_detections(
         frame,
@@ -47,6 +52,11 @@ while True:
         detector.model.names,
         speeds
     )
+    frame = visualizer.draw_trajectory(
+    frame,
+    trajectory
+    )
+    
 
     end_time = time.time()
     fps = 1 / (end_time - start_time)

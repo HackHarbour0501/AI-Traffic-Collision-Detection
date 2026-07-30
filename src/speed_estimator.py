@@ -1,83 +1,57 @@
 import math
 import time
 
-from config import (
-    PIXEL_TO_KMH,
-    MAX_HISTORY
-)
+from config import PIXEL_TO_KMH
 
 
 class SpeedEstimator:
 
     def __init__(self):
 
-        # Track History
-        # {
-        #   track_id :
-        #   {
-        #       center : (x,y),
-        #       time   : timestamp
-        #   }
-        # }
+        # Last timestamp for every vehicle
+        self.previous_time = {}
 
-        self.vehicle_history = {}
+    # Update Speeds
 
-    # Calculate Center
-    def get_center(self, box):
 
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
-
-        center_x = (x1 + x2) // 2
-        center_y = (y1 + y2) // 2
-
-        return (center_x, center_y)
-    
-    # Euclidean Distance
-    def calculate_distance(self, p1, p2):
-
-        return math.sqrt(
-
-            (p2[0] - p1[0]) ** 2 +
-
-            (p2[1] - p1[1]) ** 2
-        )
-
-    # Update Speed
-    def update(self, detections):
+    def update(self, trajectory_manager):
 
         speeds = {}
 
         current_time = time.time()
 
-        for box in detections:
+        trajectories = trajectory_manager.get_all_trajectories()
 
-            # Skip if tracker ID is unavailable
-            if box.id is None:
-                continue
+        for track_id, trajectory in trajectories.items():
 
-            track_id = int(box.id.item())
-
-            center = self.get_center(box)
-
-            # First appearance
-            if track_id not in self.vehicle_history:
-
-                self.vehicle_history[track_id] = {
-
-                    "center": center,
-
-                    "time": current_time
-                }
+            if len(trajectory) < 2:
 
                 speeds[track_id] = 0.0
 
                 continue
 
-            previous_center = self.vehicle_history[track_id]["center"]
+            current_position = trajectory[-1]
 
-            previous_time = self.vehicle_history[track_id]["time"]
+            previous_position = trajectory[-2]
 
-            # Time difference
+            distance = math.sqrt(
+
+                (current_position[0] - previous_position[0]) ** 2 +
+
+                (current_position[1] - previous_position[1]) ** 2
+
+            )
+
+            previous_time = self.previous_time.get(track_id)
+
+            if previous_time is None:
+
+                self.previous_time[track_id] = current_time
+
+                speeds[track_id] = 0.0
+
+                continue
+
             dt = current_time - previous_time
 
             if dt <= 0:
@@ -86,48 +60,28 @@ class SpeedEstimator:
 
                 continue
 
-            # Pixel Distance
-            distance = self.calculate_distance(
-                previous_center,
-                center
-            )
-
-            # Pixels per second
             pixel_speed = distance / dt
 
-            # Approximate km/h
             speed = pixel_speed * PIXEL_TO_KMH
 
             speeds[track_id] = speed
 
-            # Update history
-            self.vehicle_history[track_id] = {
+            self.previous_time[track_id] = current_time
 
-                "center": center,
-
-                "time": current_time
-            }
-
-        self.cleanup(detections)
+        self.cleanup(trajectories)
 
         return speeds
+
+   
+    # Cleanup
     
-    # Remove Lost Vehicles
-    def cleanup(self, detections):
+    def cleanup(self, trajectories):
 
-        active_tracks = set()
-
-        for box in detections:
-
-            if box.id is not None:
-
-                active_tracks.add(
-                    int(box.id.item())
-                )
+        active_tracks = set(trajectories.keys())
 
         lost_tracks = []
 
-        for track_id in self.vehicle_history:
+        for track_id in self.previous_time:
 
             if track_id not in active_tracks:
 
@@ -135,4 +89,4 @@ class SpeedEstimator:
 
         for track_id in lost_tracks:
 
-            del self.vehicle_history[track_id]
+            del self.previous_time[track_id]

@@ -23,7 +23,7 @@ DOCS_DIR = BASE_DIR / "docs"
 
 # VIDEO CONFIGURATION
 
-VIDEO_NAME = "HighwayTraffic.mp4"
+VIDEO_NAME = "Highwaytraffic3.mp4"
 
 VIDEO_PATH = VIDEO_DIR / VIDEO_NAME
 

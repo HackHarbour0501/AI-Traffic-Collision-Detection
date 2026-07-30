@@ -1,18 +1,4 @@
-"""
-visualizer.py
----------------------------------------------------------
-Visualization Module
----------------------------------------------------------
-Draws:
-    • Bounding Boxes
-    • Vehicle IDs
-    • Confidence Scores
-    • Speed
-    • FPS
-"""
-
 import cv2
-
 from config import (
     BOX_COLOR,
     TEXT_COLOR,
@@ -24,6 +10,7 @@ from config import (
     LINE_THICKNESS,
     SHOW_TRACK_ID,
     SHOW_CONFIDENCE,
+    TRAJECTORY_COLOR,
     SHOW_SPEED,
     SHOW_FPS,
 )
@@ -34,10 +21,8 @@ class Visualizer:
     def __init__(self):
         pass
 
-    # -----------------------------------------------------
+   
     # Draw Vehicle Detections
-    # -----------------------------------------------------
-
     def draw_detections(self, frame, detections, names, speeds=None):
 
         if speeds is None:
@@ -73,10 +58,8 @@ class Visualizer:
                 LINE_THICKNESS,
             )
 
-            # -----------------------------
+            
             # Label Line
-            # -----------------------------
-
             label = class_name
 
             if SHOW_TRACK_ID and track_id is not None:
@@ -95,10 +78,7 @@ class Visualizer:
                 FONT_THICKNESS,
             )
 
-            # -----------------------------
             # Speed Line
-            # -----------------------------
-
             if SHOW_SPEED and track_id is not None:
 
                 cv2.putText(
@@ -113,10 +93,8 @@ class Visualizer:
 
         return frame
 
-    # -----------------------------------------------------
+   
     # Draw FPS
-    # -----------------------------------------------------
-
     def draw_fps(self, frame, fps):
 
         if not SHOW_FPS:
@@ -134,10 +112,7 @@ class Visualizer:
 
         return frame
 
-    # -----------------------------------------------------
     # Draw Collision Alert (Future)
-    # -----------------------------------------------------
-
     def draw_collision(self, frame, x1, y1, x2, y2):
 
         cv2.rectangle(
@@ -157,5 +132,46 @@ class Visualizer:
             COLLISION_COLOR,
             2,
         )
+
+        return frame
+        
+    # Draw Vehicle Trajectories
+    def draw_trajectory(self, frame, trajectory_manager):
+
+        trajectories = trajectory_manager.get_all_trajectories()
+
+        for track_id, trajectory in trajectories.items():
+
+            # Need at least two points to draw a line
+            if len(trajectory) < 2:
+                continue
+
+            points = list(trajectory)
+
+            # Draw line segments
+            for i in range(1, len(points)):
+
+                cv2.line(
+                    frame,
+                    points[i - 1],
+                    points[i],
+                    TRAJECTORY_COLOR,
+                    2
+                )
+
+            # Optional: Predicted Position
+
+
+            predicted = trajectory_manager.predict_next_position(track_id)
+
+            if predicted is not None:
+
+                cv2.circle(
+                    frame,
+                    predicted,
+                    5,
+                    TRAJECTORY_COLOR,
+                    -1
+                )
 
         return frame
