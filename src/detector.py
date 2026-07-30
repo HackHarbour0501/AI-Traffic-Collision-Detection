@@ -1,41 +1,73 @@
+
 from ultralytics import YOLO
 
-VEHICLE_CLASSES = {1, 2, 3, 5, 7}
+from config import (
+    MODEL_PATH,
+    CONFIDENCE_THRESHOLD,
+    IOU_THRESHOLD,
+    VEHICLE_CLASSES,
+    TRACKER_CONFIG,
+    TRACK_PERSIST
+)
 
 
 class VehicleDetector:
+    def __init__(self):
 
-    def __init__(self, model_path="yolov8n.pt"):
-        self.model = YOLO(model_path)
+        self.model = YOLO(MODEL_PATH)
 
+    # Detect Vehicles
     def detect(self, frame):
 
-        results = self.model(frame, verbose=False)
+        results = self.model(
+            frame,
+            conf=CONFIDENCE_THRESHOLD,
+            iou=IOU_THRESHOLD,
+            verbose=False
+        )
 
-        return self.filter(results)
+        return self._filter_results(results)
 
+    # Track Vehicles
     def track(self, frame):
 
         results = self.model.track(
             frame,
-            persist=True,
-            tracker="bytetrack.yaml",
+            persist=TRACK_PERSIST,
+            tracker=TRACKER_CONFIG,
+            conf=CONFIDENCE_THRESHOLD,
+            iou=IOU_THRESHOLD,
             verbose=False
         )
 
-        return self.filter(results)
+        return self._filter_results(results)
 
-    def filter(self, results):
+    # Filter Only Vehicle Classes
+
+    def _filter_results(self, results):
 
         detections = []
 
-        for box in results[0].boxes:
+        if len(results) == 0:
+            return results, detections
 
-            cls = int(box.cls[0])
+        boxes = results[0].boxes
 
-            if cls not in VEHICLE_CLASSES:
+        if boxes is None:
+            return results, detections
+
+        for box in boxes:
+
+            class_id = int(box.cls[0])
+
+            if class_id not in VEHICLE_CLASSES:
                 continue
 
             detections.append(box)
 
         return results, detections
+
+    # Get Class Name
+    def get_class_name(self, class_id):
+
+        return self.model.names[class_id]
