@@ -1,3 +1,10 @@
+"""
+app.py
+---------------------------------------------------------
+AI Traffic Collision Detection
+Main Application
+---------------------------------------------------------
+"""
 
 import time
 import cv2
@@ -8,25 +15,43 @@ from config import (
 )
 
 from detector import VehicleDetector
-from speed_estimator import SpeedEstimator
-from visualizer import Visualizer
 from trajectory import TrajectoryManager
+from speed_estimator import SpeedEstimator
+from collision_detector import CollisionDetector
+from visualizer import Visualizer
+
+
+# ==========================================================
+# Initialize Modules
+# ==========================================================
 
 detector = VehicleDetector()
 
+trajectory_manager = TrajectoryManager()
+
 speed_estimator = SpeedEstimator()
+
+collision_detector = CollisionDetector()
 
 visualizer = Visualizer()
 
-trajectory= TrajectoryManager()
 
+# ==========================================================
+# Open Video
+# ==========================================================
 
 cap = cv2.VideoCapture(str(VIDEO_PATH))
 
 if not cap.isOpened():
+
     print(f"Unable to open video: {VIDEO_PATH}")
+
     exit()
 
+
+# ==========================================================
+# Main Loop
+# ==========================================================
 
 while True:
 
@@ -37,37 +62,90 @@ while True:
     if not ret:
         break
 
+    # ------------------------------------------------------
+    # Vehicle Detection + Tracking
+    # ------------------------------------------------------
 
     results, detections = detector.track(frame)
 
-    trajectory.update(detections)
+    # ------------------------------------------------------
+    # Update Trajectories
+    # ------------------------------------------------------
+
+    trajectory_manager.update(detections)
+
+    # ------------------------------------------------------
+    # Estimate Speed
+    # ------------------------------------------------------
 
     speeds = speed_estimator.update(
-        trajectory
+        trajectory_manager
     )
+
+    # ------------------------------------------------------
+    # Detect Collision Risk
+    # ------------------------------------------------------
+
+    collision_events = collision_detector.detect(
+        trajectory_manager,
+        speeds
+    )
+
+    # ------------------------------------------------------
+    # Draw Bounding Boxes
+    # ------------------------------------------------------
 
     frame = visualizer.draw_detections(
         frame,
         detections,
         detector.model.names,
-        speeds
+        speeds,
+        collision_events
     )
+
+    # ------------------------------------------------------
+    # Draw Trajectories
+    # ------------------------------------------------------
+
     frame = visualizer.draw_trajectory(
-    frame,
-    trajectory
+        frame,
+        trajectory_manager
     )
-    
 
-    end_time = time.time()
-    fps = 1 / (end_time - start_time)
-    frame = visualizer.draw_fps(frame, fps)
+    # ------------------------------------------------------
+    # FPS
+    # ------------------------------------------------------
 
-    cv2.imshow(WINDOW_NAME, frame)
+    elapsed = time.time() - start_time
 
-    key = cv2.waitKey(1)
+    fps = 1.0 / elapsed if elapsed > 0 else 0.0
 
-    if key == ord("q"):
+    frame = visualizer.draw_fps(
+        frame,
+        fps
+    )
+
+    # ------------------------------------------------------
+    # Display Frame
+    # ------------------------------------------------------
+
+    cv2.imshow(
+        WINDOW_NAME,
+        frame
+    )
+
+    # ------------------------------------------------------
+    # Exit
+    # ------------------------------------------------------
+
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
+
+# ==========================================================
+# Cleanup
+# ==========================================================
+
 cap.release()
+
 cv2.destroyAllWindows()

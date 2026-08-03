@@ -23,10 +23,19 @@ class Visualizer:
 
    
     # Draw Vehicle Detections
-    def draw_detections(self, frame, detections, names, speeds=None):
+    def draw_detections(self,frame,detections,names,speeds=None,collision_events=None):
 
         if speeds is None:
             speeds = {}
+        if collision_events is None:
+            collision_events = []
+
+        collision_map = {}
+
+        for event in collision_events:
+
+            collision_map[event["vehicle1"]] = event["risk"]
+            collision_map[event["vehicle2"]] = event["risk"]
 
         for box in detections:
 
@@ -50,15 +59,18 @@ class Visualizer:
             speed = speeds.get(track_id, 0)
 
             # Draw Bounding Box
+            box_color = BOX_COLOR
+
+            if track_id in collision_map:
+                box_color = COLLISION_COLOR
+
             cv2.rectangle(
                 frame,
                 (x1, y1),
                 (x2, y2),
-                BOX_COLOR,
+                box_color,
                 LINE_THICKNESS,
-            )
-
-            
+        )   
             # Label Line
             label = class_name
 
@@ -90,6 +102,17 @@ class Visualizer:
                     SPEED_COLOR,
                     FONT_THICKNESS,
                 )
+                if track_id in collision_map:
+
+                    cv2.putText(
+                        frame,
+                        f"⚠ {collision_map[track_id]} RISK",
+                        (x1, y2 + 40),
+                        FONT,
+                        FONT_SCALE,
+                        COLLISION_COLOR,
+                        FONT_THICKNESS
+                    )
 
         return frame
 
